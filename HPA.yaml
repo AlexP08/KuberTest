@@ -1,0 +1,15 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: server-deploy
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: server-deploy
+  minReplicas: 1 # минимально в ночные часы может быть и 1 под  
+  maxReplicas: 4 # исходя из нагрузочного тестирования максимум нам нужно 4 пода
+  targetCPUUtilizationPercentage: 200 
+
+# если я правильно понял алгоритм пересчета то так как у меня стоит 100м в ресурсах и я хочу чтобы дополнительный pod 
+# создавался при 200м - надо поставить 200% в targetCPUUtilizationPercentage

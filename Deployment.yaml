@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-deploy
+  labels:
+    app: server
+spec:
+  replicas: 1    #Тут у нас всем управляет HPA (как я прочитал в таких случях для эффективности надо делать одну реплику все остальное будет делать HPA)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+  selector:
+   matchLabels:
+     app: server
+  template:
+   metadata:
+    labels:
+      app: server
+   spec:
+     affinity: 
+        podAntiAffinity:  # тут так как у нас три зоны - мы создаем правило для того чтобы по возможности одинаковые pod создавались в разных зонах
+          preferredDuringSchedulingIgnoredDuringExecution: 
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - server 
+              topologyKey: topology.kubernetes.io/zone	  
+     containers:
+      - name: server
+        image: alex08p/server_a:1.0
+        ports:
+         - containerPort: 8080
+
+        startupProbe: # на инициализацию нужно 5-10 сек. вот и ставим 10 и 3 попытки на всякий случай
+  	  httpGet:
+    	    path: /
+    	    port: 8080
+  	  failureThreshold: 3
+  	  periodSeconds: 10
+
+
+	resources:   
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+#  у нас и в требованиях по памяти написано "ровно", и я прочитал что хорошей практикой считается устанавливать 
+# запрашиваемый объем памяти равный лимиту, а CPU не лимитировать. 
+# И у нас будет ведь будет HPA который будет исходить из запрашиваемых ресурсов, а не лимитируемых 
